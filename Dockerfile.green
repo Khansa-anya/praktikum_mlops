@@ -1,0 +1,7 @@
+
+FROM python:3.10-slim
+WORKDIR /app
+COPY app_green.py model_green.pkl ./
+RUN pip install flask scikit-learn joblib numpy
+EXPOSE 5001
+CMD ["python", "app_green.py"]
