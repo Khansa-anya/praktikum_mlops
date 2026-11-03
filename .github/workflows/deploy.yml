@@ -1,0 +1,50 @@
+name: Build and Test ML Deployments (Blue/Green)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    # --- DEPLOYMENT BLUE (Port 5000) ---
+    - name: Build Docker Image Blue
+      run: docker build -f Dockerfile.blue -t ml-app-blue .
+
+    - name: Run Container Blue
+      run: docker run -d -p 5000:5000 --name container-blue ml-app-blue
+
+    - name: Test Endpoint Blue (/health & /predict)
+      run: |
+        sleep 5
+        curl -f http://localhost:5000/health
+        curl -X POST http://localhost:5000/predict \
+             -H "Content-Type: application/json" \
+             -d '{"data":[13.2, 2.77, 2.51, 18.5, 96.0, 1.04, 2.55, 0.57, 1.47, 6.2, 1.05, 3.33, 820.0]}'
+
+    # --- DEPLOYMENT GREEN (Port 5001) ---
+    - name: Build Docker Image Green
+      run: docker build -f Dockerfile.green -t ml-app-green .
+
+    - name: Run Container Green
+      run: docker run -d -p 5001:5001 --name container-green ml-app-green
+
+    - name: Test Endpoint Green (/health & /predict)
+      run: |
+        sleep 5
+        curl -f http://localhost:5001/health
+        curl -X POST http://localhost:5001/predict \
+             -H "Content-Type: application/json" \
+             -d '{"data":[13.2, 2.77, 2.51, 18.5, 96.0, 1.04, 2.55, 0.57, 1.47, 6.2, 1.05, 3.33, 820.0]}'
